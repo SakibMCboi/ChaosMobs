@@ -3,7 +3,7 @@ version: 1.0-SNAPSHOT
 main: com.sakibmc.chaosmobs.ChaosMobs
 api-version: 1.21
 author: SakibMC
-description: Fun random mob behaviors and mini boss events! - v1.0
+description: Fun random mob behaviors and mini boss events! - v2.0 - Enhanced
 
 commands:
   chaos:
