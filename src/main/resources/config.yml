@@ -1,0 +1,29 @@
+# ChaosMobs Configuration
+# Restart server after changing settings
+
+# How often random events happen (in seconds)
+event-interval-min: 480     # 8 minutes
+event-interval-max: 720     # 12 minutes
+
+# Chance for each event (higher number = more likely)
+mini-boss-chance: 30
+mob-frenzy-chance: 30
+explosive-creepers-chance: 25
+ghost-gift-chance: 15
+
+# Mini Boss Settings
+mini-boss-health: 120
+mini-boss-name: "☠ Chaos Overlord"
+
+# Mob Frenzy Settings
+mob-frenzy-radius: 30
+mob-frenzy-duration: 45     # seconds
+
+# Explosive Creepers Settings
+explosive-creeper-count: 3
+explosive-creeper-fuse: 30  # ticks (20 ticks = 1 second)
+
+# Ghost Gift Settings
+ghost-gift-duration: 15     # seconds before it gives gifts
+ghost-emerald-amount: 3
+ghost-gold-amount: 2
