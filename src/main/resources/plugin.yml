@@ -1,1 +1,12 @@
+name: ChaosMobs
+version: 1.0-SNAPSHOT
+main: com.sakibmc.chaosmobs.ChaosMobs
+api-version: 1.21
+author: SakibMC
+description: Fun random mob behaviors and mini boss events!
 
+commands:
+  chaos:
+    description: Trigger a random chaos event
+    usage: /chaos
+    permission: chaosmobs.chaos
