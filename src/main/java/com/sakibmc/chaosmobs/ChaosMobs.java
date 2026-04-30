@@ -23,15 +23,26 @@ public class ChaosMobs extends JavaPlugin implements Listener {
 
     private final Random random = new Random();
     private FileConfiguration config;
+    private boolean vaultEnabled = false;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         config = getConfig();
 
+        // Check for Vault + Economy
+        if (Bukkit.getPluginManager().getPlugin("Vault") != null) {
+            if (Bukkit.getServicesManager().getRegistration(net.milkbowl.vault.economy.Economy.class) != null) {
+                vaultEnabled = true;
+                getLogger().info(ChatColor.GREEN + "Vault + Economy found! Mini Boss will reward $1000.");
+            }
+        } else {
+            getLogger().warning("Vault not found. No money rewards for killing Mini Boss.");
+        }
+
         getServer().getPluginManager().registerEvents(this, this);
 
-        getLogger().info(ChatColor.GREEN + "ChaosMobs enabled! Automatic events every ~10 minutes.");
+        getLogger().info(ChatColor.GREEN + "ChaosMobs enabled! Automatic chaos events every ~10 minutes.");
         startAutomaticChaosTimer();
     }
 
@@ -43,7 +54,7 @@ public class ChaosMobs extends JavaPlugin implements Listener {
                     triggerRandomChaosEvent();
                 }
             }
-        }.runTaskTimer(this, 20 * 60 * 8, 20 * 60 * 10); // First event after 8 min, then every 8-10 min
+        }.runTaskTimer(this, 20 * 60 * 8, 20 * 60 * 10);
     }
 
     private void triggerRandomChaosEvent() {
@@ -86,8 +97,16 @@ public class ChaosMobs extends JavaPlugin implements Listener {
 
         Player killer = zombie.getKiller();
         if (killer != null) {
-            killer.sendMessage(ChatColor.GOLD + "[Chaos] " + ChatColor.GREEN + "You killed the Chaos Overlord!");
-            // TODO: Add $1000 reward here once Vault works
+            if (vaultEnabled) {
+                net.milkbowl.vault.economy.Economy econ = Bukkit.getServicesManager()
+                        .getRegistration(net.milkbowl.vault.economy.Economy.class).getProvider();
+                if (econ != null) {
+                    econ.depositPlayer(killer, 1000);
+                    killer.sendMessage(ChatColor.GOLD + "[Chaos] " + ChatColor.GREEN + "You killed the Chaos Overlord and received $1000!");
+                }
+            } else {
+                killer.sendMessage(ChatColor.GOLD + "[Chaos] " + ChatColor.GREEN + "You killed the Chaos Overlord!");
+            }
         }
         broadcastEvent("💰 The Chaos Overlord has been defeated!");
     }
@@ -106,7 +125,7 @@ public class ChaosMobs extends JavaPlugin implements Listener {
             }
         });
 
-        broadcastEvent("⚡ Mob Frenzy! Nearby monsters are stronger and faster!");
+        broadcastEvent("⚡ Mob Frenzy! Nearby monsters are enraged!");
     }
 
     private void spawnExplosiveCreepers() {
