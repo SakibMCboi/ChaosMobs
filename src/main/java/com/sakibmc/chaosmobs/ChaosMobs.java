@@ -23,20 +23,11 @@ public class ChaosMobs extends JavaPlugin implements Listener {
 
     private final Random random = new Random();
     private FileConfiguration config;
-    private boolean vaultEnabled = false;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         config = getConfig();
-
-        // Check for Vault
-        if (Bukkit.getPluginManager().getPlugin("Vault") != null) {
-            vaultEnabled = true;
-            getLogger().info(ChatColor.GREEN + "Vault detected! Mini Boss will reward $1000 on kill.");
-        } else {
-            getLogger().warning("Vault not found. Mini Boss will not give money rewards.");
-        }
 
         getServer().getPluginManager().registerEvents(this, this);
 
@@ -52,7 +43,7 @@ public class ChaosMobs extends JavaPlugin implements Listener {
                     triggerRandomChaosEvent();
                 }
             }
-        }.runTaskTimer(this, 20 * 60 * 8, 20 * 60 * 10); // First after 8 min, then every 8-10 min
+        }.runTaskTimer(this, 20 * 60 * 8, 20 * 60 * 10); // First event after 8 min, then every 8-10 min
     }
 
     private void triggerRandomChaosEvent() {
@@ -63,15 +54,130 @@ public class ChaosMobs extends JavaPlugin implements Listener {
 
         int roll = random.nextInt(total);
 
-        if (roll < config.getInt("mini-boss-chance", 30)) {
-            spawnMiniBoss();
-        } else if (roll < config.getInt("mini-boss-chance", 30) + config.getInt("mob-frenzy-chance", 30)) {
-            triggerMobFrenzy();
-        } else if (roll < config.getInt("mini-boss-chance", 30) + config.getInt("mob-frenzy-chance", 30) + config.getInt("explosive-creepers-chance", 25)) {
-            spawnExplosiveCreepers();
-        } else {
-            spawnGhostGift();
-        }
+        if (roll < config.getInt("mini-boss-chance", 30)) spawnMiniBoss();
+        else if (roll < config.getInt("mini-boss-chance", 30) + config.getInt("mob-frenzy-chance", 30)) triggerMobFrenzy();
+        else if (roll < config.getInt("mini-boss-chance", 30) + config.getInt("mob-frenzy-chance", 30) + config.getInt("explosive-creepers-chance", 25)) spawnExplosiveCreepers();
+        else spawnGhostGift();
     }
 
-    private void spawn
+    private void spawnMiniBoss() {
+        Player player = getRandomPlayer();
+        if (player == null) return;
+
+        Location loc = player.getLocation().add(random.nextInt(6) - 3, 1, random.nextInt(6) - 3);
+        Zombie boss = player.getWorld().spawn(loc, Zombie.class);
+
+        String name = config.getString("mini-boss-name", "☠ Chaos Overlord");
+        boss.setCustomName(ChatColor.RED + name);
+        boss.setCustomNameVisible(true);
+        boss.setMaxHealth(config.getInt("mini-boss-health", 120));
+        boss.setHealth(config.getInt("mini-boss-health", 120));
+        boss.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, 999999, 1));
+        boss.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 999999, 0));
+
+        player.getWorld().playSound(loc, Sound.ENTITY_WITHER_SPAWN, 1.0f, 1.0f);
+        broadcastEvent("☠ " + name + " has spawned near " + player.getName() + "!");
+    }
+
+    @EventHandler
+    public void onEntityDeath(EntityDeathEvent event) {
+        if (!(event.getEntity() instanceof Zombie zombie)) return;
+        if (zombie.getCustomName() == null || !zombie.getCustomName().contains("Chaos")) return;
+
+        Player killer = zombie.getKiller();
+        if (killer != null) {
+            killer.sendMessage(ChatColor.GOLD + "[Chaos] " + ChatColor.GREEN + "You killed the Chaos Overlord!");
+            // TODO: Add $1000 reward here once Vault works
+        }
+        broadcastEvent("💰 The Chaos Overlord has been defeated!");
+    }
+
+    private void triggerMobFrenzy() {
+        Player player = getRandomPlayer();
+        if (player == null) return;
+
+        int radius = config.getInt("mob-frenzy-radius", 30);
+        int duration = config.getInt("mob-frenzy-duration", 45) * 20;
+
+        player.getWorld().getNearbyEntities(player.getLocation(), radius, radius, radius).forEach(entity -> {
+            if (entity instanceof Monster mob && !(entity instanceof Boss)) {
+                mob.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, duration, 1));
+                mob.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, duration, 1));
+            }
+        });
+
+        broadcastEvent("⚡ Mob Frenzy! Nearby monsters are stronger and faster!");
+    }
+
+    private void spawnExplosiveCreepers() {
+        Player player = getRandomPlayer();
+        if (player == null) return;
+
+        int count = config.getInt("explosive-creeper-count", 3);
+
+        for (int i = 0; i < count; i++) {
+            Location loc = player.getLocation().add(random.nextInt(8) - 4, 1, random.nextInt(8) - 4);
+            Creeper creeper = player.getWorld().spawn(loc, Creeper.class);
+            creeper.setPowered(true);
+            creeper.setMaxFuseTicks(config.getInt("explosive-creeper-fuse", 30));
+        }
+
+        broadcastEvent("💥 " + count + " Supercharged Creepers spawned nearby!");
+    }
+
+    private void spawnGhostGift() {
+        Player player = getRandomPlayer();
+        if (player == null) return;
+
+        Location loc = player.getLocation().add(0, 2, 0);
+        Zombie ghost = player.getWorld().spawn(loc, Zombie.class);
+
+        ghost.setCustomName(ChatColor.AQUA + "✨ Friendly Ghost");
+        ghost.setCustomNameVisible(true);
+        ghost.setBaby();
+        ghost.setInvisible(true);
+        ghost.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 999999, 0));
+
+        int delay = config.getInt("ghost-gift-duration", 15) * 20;
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (ghost.isValid()) {
+                    ghost.getWorld().dropItemNaturally(ghost.getLocation(), 
+                        new org.bukkit.inventory.ItemStack(Material.EMERALD, config.getInt("ghost-emerald-amount", 3)));
+                    ghost.getWorld().dropItemNaturally(ghost.getLocation(), 
+                        new org.bukkit.inventory.ItemStack(Material.GOLD_INGOT, config.getInt("ghost-gold-amount", 2)));
+                    ghost.remove();
+                }
+            }
+        }.runTaskLater(this, delay);
+
+        broadcastEvent("✨ A Friendly Ghost appeared near " + player.getName() + "!");
+    }
+
+    private Player getRandomPlayer() {
+        var players = Bukkit.getOnlinePlayers();
+        if (players.isEmpty()) return null;
+        return players.stream().skip(random.nextInt(players.size())).findFirst().orElse(null);
+    }
+
+    private void broadcastEvent(String message) {
+        Bukkit.broadcastMessage(ChatColor.GOLD + "[Chaos] " + ChatColor.YELLOW + message);
+    }
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (command.getName().equalsIgnoreCase("chaos")) {
+            triggerRandomChaosEvent();
+            sender.sendMessage(ChatColor.GREEN + "Chaos event triggered!");
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void onDisable() {
+        getLogger().info(ChatColor.RED + "ChaosMobs has been disabled.");
+    }
+}
