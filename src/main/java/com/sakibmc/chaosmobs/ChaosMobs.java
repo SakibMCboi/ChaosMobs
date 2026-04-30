@@ -23,26 +23,17 @@ public class ChaosMobs extends JavaPlugin implements Listener {
 
     private final Random random = new Random();
     private FileConfiguration config;
-    private boolean vaultEnabled = false;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         config = getConfig();
 
-        // Check for Vault + Economy
-        if (Bukkit.getPluginManager().getPlugin("Vault") != null) {
-            if (Bukkit.getServicesManager().getRegistration(net.milkbowl.vault.economy.Economy.class) != null) {
-                vaultEnabled = true;
-                getLogger().info(ChatColor.GREEN + "Vault + Economy found! Mini Boss will reward $1000.");
-            }
-        } else {
-            getLogger().warning("Vault not found. No money rewards for killing Mini Boss.");
-        }
-
         getServer().getPluginManager().registerEvents(this, this);
 
-        getLogger().info(ChatColor.GREEN + "ChaosMobs enabled! Automatic chaos events every ~10 minutes.");
+        getLogger().info(ChatColor.GREEN + "ChaosMobs enabled successfully!");
+        getLogger().info(ChatColor.YELLOW + "Automatic chaos events will start in about 8 minutes.");
+
         startAutomaticChaosTimer();
     }
 
@@ -54,7 +45,7 @@ public class ChaosMobs extends JavaPlugin implements Listener {
                     triggerRandomChaosEvent();
                 }
             }
-        }.runTaskTimer(this, 20 * 60 * 8, 20 * 60 * 10);
+        }.runTaskTimer(this, 20 * 60 * 8, 20 * 60 * 10); // 8 min first, then every 8-10 min
     }
 
     private void triggerRandomChaosEvent() {
@@ -65,10 +56,15 @@ public class ChaosMobs extends JavaPlugin implements Listener {
 
         int roll = random.nextInt(total);
 
-        if (roll < config.getInt("mini-boss-chance", 30)) spawnMiniBoss();
-        else if (roll < config.getInt("mini-boss-chance", 30) + config.getInt("mob-frenzy-chance", 30)) triggerMobFrenzy();
-        else if (roll < config.getInt("mini-boss-chance", 30) + config.getInt("mob-frenzy-chance", 30) + config.getInt("explosive-creepers-chance", 25)) spawnExplosiveCreepers();
-        else spawnGhostGift();
+        if (roll < config.getInt("mini-boss-chance", 30)) {
+            spawnMiniBoss();
+        } else if (roll < config.getInt("mini-boss-chance", 30) + config.getInt("mob-frenzy-chance", 30)) {
+            triggerMobFrenzy();
+        } else if (roll < config.getInt("mini-boss-chance", 30) + config.getInt("mob-frenzy-chance", 30) + config.getInt("explosive-creepers-chance", 25)) {
+            spawnExplosiveCreepers();
+        } else {
+            spawnGhostGift();
+        }
     }
 
     private void spawnMiniBoss() {
@@ -97,16 +93,7 @@ public class ChaosMobs extends JavaPlugin implements Listener {
 
         Player killer = zombie.getKiller();
         if (killer != null) {
-            if (vaultEnabled) {
-                net.milkbowl.vault.economy.Economy econ = Bukkit.getServicesManager()
-                        .getRegistration(net.milkbowl.vault.economy.Economy.class).getProvider();
-                if (econ != null) {
-                    econ.depositPlayer(killer, 1000);
-                    killer.sendMessage(ChatColor.GOLD + "[Chaos] " + ChatColor.GREEN + "You killed the Chaos Overlord and received $1000!");
-                }
-            } else {
-                killer.sendMessage(ChatColor.GOLD + "[Chaos] " + ChatColor.GREEN + "You killed the Chaos Overlord!");
-            }
+            killer.sendMessage(ChatColor.GOLD + "[Chaos] " + ChatColor.GREEN + "You killed the Chaos Overlord! Great job!");
         }
         broadcastEvent("💰 The Chaos Overlord has been defeated!");
     }
@@ -125,7 +112,7 @@ public class ChaosMobs extends JavaPlugin implements Listener {
             }
         });
 
-        broadcastEvent("⚡ Mob Frenzy! Nearby monsters are enraged!");
+        broadcastEvent("⚡ Mob Frenzy! Nearby monsters are stronger and faster for 45 seconds!");
     }
 
     private void spawnExplosiveCreepers() {
@@ -141,7 +128,7 @@ public class ChaosMobs extends JavaPlugin implements Listener {
             creeper.setMaxFuseTicks(config.getInt("explosive-creeper-fuse", 30));
         }
 
-        broadcastEvent("💥 " + count + " Supercharged Creepers spawned nearby!");
+        broadcastEvent("💥 " + count + " Supercharged Creepers have spawned nearby! Run!");
     }
 
     private void spawnGhostGift() {
@@ -189,7 +176,7 @@ public class ChaosMobs extends JavaPlugin implements Listener {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (command.getName().equalsIgnoreCase("chaos")) {
             triggerRandomChaosEvent();
-            sender.sendMessage(ChatColor.GREEN + "Chaos event triggered!");
+            sender.sendMessage(ChatColor.GREEN + "Chaos event triggered manually!");
             return true;
         }
         return false;
